@@ -1,79 +1,80 @@
 using System;
 using System.Collections.Generic;
-using EXILED;
+using System.Linq;
+using Exiled.API.Features;
 using MEC;
+
+using Server = Exiled.Events.Handlers.Server;
 
 namespace LuckySlots
 {
-	public class Plugin : EXILED.Plugin
+	public class Plugin : Plugin<Config>
 	{
-		public Methods Functions { get; private set; }
-		public EventHandlers EventHandlers { get; private set; }
-		public Commands Commands { get; private set; }
-		public Random Gen = new Random();
-		public List<CoroutineHandle> Coroutines = new List<CoroutineHandle>();
+        internal static Plugin Singleton;
 
-		public bool Enabled;
-		public float Timer;
-		public float Chance;
-		public List<ItemType> Items = new List<ItemType>();
-		public List<RoleType> BlacklistedRoles = new List<RoleType>();
-		public string Rolling;
-		public string Lucky;
-		public string UnLucky;
+        public override string Name => "Lucky Slots";
+        public override string Author => "Marco15453";
+        public override Version Version => new Version(1, 1, 0);
+        public override Version RequiredExiledVersion => new Version(3, 0, 0);
 
-		public override void OnEnable()
-		{
-			Functions = new Methods(this);
-			ReloadConfig();
-			if (!Enabled)
-				return;
-			
-			EventHandlers = new EventHandlers(this);
-			Commands = new Commands(this);
+		private EventHandler eventHandler;
+        private Random rnd = new Random();
 
-			Events.WaitingForPlayersEvent += EventHandlers.OnWaitingForPlayers;
-			Events.RoundStartEvent += EventHandlers.OnRoundStart;
-			Events.RoundEndEvent += EventHandlers.OnRoundEnd;
-			Events.RemoteAdminCommandEvent += Commands.OnRaCommand;
-		}
+        public CoroutineHandle slotsCoroutine;
 
-		public override void OnDisable()
-		{
-			Events.WaitingForPlayersEvent -= EventHandlers.OnWaitingForPlayers;
-			Events.RoundStartEvent -= EventHandlers.OnRoundStart;
-			Events.RoundEndEvent -= EventHandlers.OnRoundEnd;
-			Events.RemoteAdminCommandEvent -= Commands.OnRaCommand;
+        public override void OnEnabled()
+        {
+            Singleton = this;
+            RegisterEvents();
+            base.OnEnabled();
+        }
 
-			EventHandlers = null;
-			Functions = null;
-			Commands = null;
-		}
+        public override void OnDisabled()
+        {
+            UnregisterEvents();
+            base.OnDisabled();
+        }
 
-		public override void OnReload()
-		{
-		}
+		private void RegisterEvents()
+        {
+			eventHandler = new EventHandler();
 
-		public override string getName { get; } = "LuckySlots";
+			Server.RoundStarted += eventHandler.onRoundStarted;
+			Server.RoundEnded += eventHandler.onRoundEnded;
+			Server.WaitingForPlayers += eventHandler.onWaitingForPlayers;
+        }
 
-		private void ReloadConfig()
-		{
-			Log.Info("Loading Configs..");
-			Enabled = Config.GetBool("LuckySlots_enabled", true);
-			Timer = Config.GetFloat("LuckySlots_timer", 300f);
-			Chance = Config.GetFloat("LuckySlots_chance", 30f);
+		private void UnregisterEvents()
+        {
+            Server.RoundStarted -= eventHandler.onRoundStarted;
+            Server.RoundEnded -= eventHandler.onRoundEnded;
+            Server.WaitingForPlayers -= eventHandler.onWaitingForPlayers;
 
-			Items = Functions.ParseItemSettings(Config.GetString("LuckySlots_items"));
-			if (Items.Count == 0)
-				Log.Warn("No items were parsed from the config.");
+            eventHandler = null;
+        }
 
-			BlacklistedRoles = Functions.ParseRoleBlacklist(Config.GetString("LuckySlots_blacklisted_roles"));
-			if (BlacklistedRoles.Count == 0)
-				Log.Warn("No roles were parsed from the config.");
+        public IEnumerator<float> RunSlots()
+        {
+            while (true)
+            {
+                yield return Timing.WaitForSeconds(Config.Timer);
+                Map.Broadcast(5, Config.Rolling, Broadcast.BroadcastFlags.Normal, true);
+                yield return Timing.WaitForSeconds(2f);
 
-			Rolling = Config.GetString("LuckySlots_rolling", "The Lucky Slots are rolling..!");
-			Lucky = Config.GetString("LuckySlots_lucky", "You got Lucky and received a $ITEM");
-			UnLucky = Config.GetString("LuckySlots_unlucky", "Aww, better luck next time!");
-		}
-	}
+                foreach (Player ply in Player.List)
+                {
+                    if (Config.BlacklistedRoles.Contains(ply.Role) || ply.Role == RoleType.Spectator || !ply.IsHuman)
+                        continue;
+
+                    if (rnd.Next(100) < Config.Chance)
+                    {
+                        ItemType item = Config.Items.ElementAt(rnd.Next(Config.Items.Count));
+                        ply.AddItem(item);
+                        ply.Broadcast(5, Config.Lucky.Replace("$ITEM", item.ToString()), Broadcast.BroadcastFlags.Normal, true);
+                    }
+                    else ply.Broadcast(5, Config.Unlucky, Broadcast.BroadcastFlags.Normal, true);
+                }
+            }
+        }
+    }
 }
