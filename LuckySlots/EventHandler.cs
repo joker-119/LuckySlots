@@ -5,7 +5,7 @@ namespace LuckySlots
 {
     internal sealed class EventHandler
     {
-        public void onRoundStarted() => Plugin.Singleton.slotsCoroutine = Timing.RunCoroutine(Plugin.Singleton.RunSlots());
+        public void onRoundStarted() => Plugin.Singleton.slotsCoroutine = Timing.RunCoroutine(Plugin.Singleton.RunSlotsLoop());
         public void onRoundEnded(RoundEndedEventArgs ev) => Timing.KillCoroutines(Plugin.Singleton.slotsCoroutine);
         public void onWaitingForPlayers() => Timing.KillCoroutines(Plugin.Singleton.slotsCoroutine);
     }
