@@ -14,7 +14,7 @@ namespace LuckySlots
 
         public override string Name => "Lucky Slots";
         public override string Author => "Original By Joker119, Continued by Marco15453";
-        public override Version Version => new Version(1, 1, 0);
+        public override Version Version => new Version(1, 2, 0);
         public override Version RequiredExiledVersion => new Version(3, 0, 0);
 
 		private EventHandler eventHandler;

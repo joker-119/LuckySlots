@@ -16,7 +16,7 @@ namespace LuckySlots
         public float Chance { get; set; } = 30f;
 
         [Description("A list of ItemTypes seperated by comma (no spaces) of every item you want players to be able to receive. If you want a specific item to have a higher chance than others, include it multiple times in the list.")]
-        public HashSet<ItemType> Items = new HashSet<ItemType>()
+        public HashSet<ItemType> Items { get; set; } = new HashSet<ItemType>()
         {
             ItemType.KeycardJanitor,
             ItemType.Painkillers,
@@ -24,7 +24,7 @@ namespace LuckySlots
         };
 
         [Description("A list of RoleTypes, seperated by comma (no spaces) of the roles you don't want to be able to receive an item. (will never attempt to give items to SCP's or Spectators).")]
-        public HashSet<RoleType> BlacklistedRoles = new HashSet<RoleType>
+        public HashSet<RoleType> BlacklistedRoles { get; set; } = new HashSet<RoleType>
         {
             RoleType.Tutorial
         };
